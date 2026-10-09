@@ -4,6 +4,7 @@ __pycache__/
 venv/
 results/
 .worktrees/
+.superpowers/
 *.py[cod]
 *.pt
 *.pth
