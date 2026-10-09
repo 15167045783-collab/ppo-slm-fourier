@@ -26,7 +26,7 @@ def _display_array(tensor: torch.Tensor) -> np.ndarray:
 
 def _grayscale_image(tensor: torch.Tensor) -> Image.Image:
     pixels = np.rint(_display_array(tensor) * 255.0).astype(np.uint8)
-    return Image.fromarray(pixels, mode="L")
+    return Image.fromarray(pixels)
 
 
 def _save_comparison(result: PhasePPOResult, path: Path) -> None:
@@ -94,7 +94,7 @@ def save_phase_ppo_result(result: PhasePPOResult, run_dir: Path) -> None:
         run_dir / "mean_phase.npy",
         result.final_mean_phase.numpy().astype(np.float32),
     )
-    Image.fromarray(phase_to_uint8(result.best_phase), mode="L").save(
+    Image.fromarray(phase_to_uint8(result.best_phase)).save(
         run_dir / "slm_8bit.png"
     )
     _grayscale_image(result.best_camera).save(run_dir / "simulated_camera.png")

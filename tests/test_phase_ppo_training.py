@@ -17,7 +17,7 @@ from ppo_slm.phase_ppo_training import train_phase_ppo
 def _target(path: Path, size: int = 4) -> Path:
     values = np.zeros((size, size), dtype=np.uint8)
     values[1:-1, 1:-1] = 255
-    Image.fromarray(values, mode="L").save(path)
+    Image.fromarray(values).save(path)
     return path
 
 

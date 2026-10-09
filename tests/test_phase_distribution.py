@@ -45,7 +45,7 @@ def test_policy_samples_are_reproducible_detached_and_wrapped_for_display() -> N
     first = PhaseDistributionPolicy(config, torch.device("cpu"))
     second = PhaseDistributionPolicy(config, torch.device("cpu"))
     with torch.no_grad():
-        first.mean.fill_(2 * math.pi + 0.1)
+        first.mean.fill_(2 * math.pi + 1.0)
         second.mean.copy_(first.mean)
 
     samples_a = first.sample(4)
@@ -156,6 +156,25 @@ def test_zero_advantages_leave_fresh_policy_unchanged() -> None:
     )
 
     assert torch.equal(before, policy.mean)
+
+
+class _PoisonSGD(torch.optim.SGD):
+    def step(self, closure: object = None) -> object:
+        result = super().step(closure)
+        with torch.no_grad():
+            self.param_groups[0]["params"][0].fill_(float("nan"))
+        return result
+
+
+def test_update_rejects_nonfinite_policy_after_optimizer_step() -> None:
+    config = _config(update_epochs=1)
+    policy = PhaseDistributionPolicy(config, torch.device("cpu"))
+    samples = policy.sample(config.population_size)
+    optimizer = _PoisonSGD(policy.parameters(), lr=0.01)
+    advantages = standardize_advantages(torch.arange(4, dtype=torch.float32))
+
+    with pytest.raises(FloatingPointError, match="mean"):
+        update_phase_policy(policy, optimizer, samples, advantages, config)
 
 
 @pytest.mark.parametrize(

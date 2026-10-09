@@ -172,6 +172,8 @@ def update_phase_policy(
             if not torch.isfinite(gradient_norm):
                 raise FloatingPointError("phase policy gradient norm is not finite")
             optimizer.step()
+            if not torch.isfinite(policy.mean).all():
+                raise FloatingPointError("phase policy mean became NaN or Inf")
 
             with torch.no_grad():
                 approx_kl = ((ratio - 1.0) - safe_log_ratio).mean()
