@@ -1,0 +1,6 @@
+# Keep an existing CUDA-enabled PyTorch installation when it already satisfies this.
+torch>=2.2
+numpy>=1.26
+Pillow>=10.0
+matplotlib>=3.8
+pytest>=8.0
