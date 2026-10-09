@@ -34,6 +34,11 @@ def test_reset_is_reproducible_and_returns_three_channel_observation() -> None:
     assert float(observation_a.max()) <= 1.0
     assert float(env.phase.min()) >= 0.0
     assert float(env.phase.max()) < 2 * math.pi
+    weights = 1.0 + config.foreground_weight * env.target
+    expected_weighted_mse = (
+        weights * (env.camera - env.target).square()
+    ).sum() / weights.sum()
+    assert env.mse == pytest.approx(float(expected_weighted_mse.item()))
 
 
 def test_unseeded_resets_advance_the_config_seed() -> None:
@@ -65,12 +70,14 @@ def test_step_updates_wrapped_phase_and_uses_exact_reward_formula() -> None:
     env = SLMEnvironment(_target(), config, torch.device("cpu"))
     env.reset(seed=2)
     previous_phase = env.phase
-    action = torch.full((64,), 10.0)
+    action = torch.full((config.action_size,), 10.0)
 
     _, reward, done, info = env.step(action)
 
     expected_phase = torch.remainder(
-        previous_phase + config.action_scale * torch.tanh(action).reshape(8, 8),
+        previous_phase
+        + config.action_scale
+        * torch.tanh(action).reshape(config.phase_size, config.phase_size),
         2 * math.pi,
     )
     expected_reward = (
@@ -92,7 +99,7 @@ def test_zero_action_preserves_phase() -> None:
     env.reset(seed=3)
     phase = env.phase
 
-    env.step(torch.zeros(64))
+    env.step(torch.zeros(env.config.action_size))
 
     assert torch.equal(phase, env.phase)
 
@@ -105,7 +112,7 @@ def test_environment_terminates_when_target_mse_is_reached() -> None:
     env = SLMEnvironment(exact_target, config, torch.device("cpu"))
     env.reset(seed=31)
 
-    _, _, done, info = env.step(torch.zeros(64))
+    _, _, done, info = env.step(torch.zeros(env.config.action_size))
 
     assert done is True
     assert info["reached_target"] is True
@@ -117,8 +124,8 @@ def test_environment_terminates_at_episode_length() -> None:
     env = SLMEnvironment(_target(), config, torch.device("cpu"))
     env.reset(seed=7)
 
-    assert env.step(torch.zeros(64))[2] is False
-    assert env.step(torch.zeros(64))[2] is True
+    assert env.step(torch.zeros(env.config.action_size))[2] is False
+    assert env.step(torch.zeros(env.config.action_size))[2] is True
     assert env.steps == 2
 
 
@@ -126,9 +133,9 @@ def test_environment_terminates_at_episode_length() -> None:
     "action",
     [
         torch.zeros(63),
-        torch.zeros((8, 8)),
-        torch.zeros(64, dtype=torch.int64),
-        torch.full((64,), float("nan")),
+        torch.zeros((64, 64)),
+        torch.zeros(4096, dtype=torch.int64),
+        torch.full((4096,), float("nan")),
     ],
 )
 def test_step_rejects_invalid_actions(action: torch.Tensor) -> None:

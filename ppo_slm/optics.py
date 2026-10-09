@@ -25,8 +25,7 @@ def upsample_phase(phase: torch.Tensor, output_size: int = 256) -> torch.Tensor:
     return functional.interpolate(
         phase[None, None],
         size=(output_size, output_size),
-        mode="bilinear",
-        align_corners=False,
+        mode="nearest",
     )[0, 0]
 
 

@@ -47,10 +47,18 @@ def _save_comparison(result: TrainingResult, path: Path) -> None:
     figure, axes = plt.subplots(1, 5, figsize=(20, 4))
     panels = (
         (target, "Target", "gray"),
-        (initial, f"Initial camera\nMSE={result.initial_mse:.6f}", "gray"),
-        (best, f"Best camera\nMSE={result.best_mse:.6f}", "gray"),
+        (
+            initial,
+            f"Initial camera\nWeighted MSE={result.initial_mse:.6f}",
+            "gray",
+        ),
+        (best, f"Best camera\nWeighted MSE={result.best_mse:.6f}", "gray"),
         (error, "Absolute error", "magma"),
-        (phase, "Best 8×8 phase", "hsv"),
+        (
+            phase,
+            f"Best {result.config.phase_size}×{result.config.phase_size} phase",
+            "hsv",
+        ),
     )
     for axis, (image, title, color_map) in zip(axes, panels, strict=True):
         axis.imshow(image, cmap=color_map)
@@ -66,9 +74,12 @@ def _save_curves(result: TrainingResult, path: Path) -> None:
     figure, axes = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
     axes[0].plot(steps, result.mse_history, color="tab:blue")
     axes[0].axhline(
-        result.config.target_mse, color="tab:red", linestyle="--", label="target MSE"
+        result.config.target_mse,
+        color="tab:red",
+        linestyle="--",
+        label="target weighted MSE",
     )
-    axes[0].set_ylabel("MSE")
+    axes[0].set_ylabel("Weighted MSE")
     axes[0].set_yscale("log")
     axes[0].legend()
     axes[0].grid(alpha=0.25)

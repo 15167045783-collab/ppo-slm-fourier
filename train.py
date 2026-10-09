@@ -11,7 +11,7 @@ from ppo_slm.training import train
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Train PPO to optimize an 8x8 phase-only SLM through a simulated "
+            "Train PPO to optimize a 64x64 phase-only SLM through a simulated "
             "Fourier focal-plane optical path."
         )
     )
@@ -70,8 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     improvement = result.initial_mse - result.best_mse
     percentage = 100.0 * improvement / max(result.initial_mse, 1e-12)
     print(f"Output: {run_dir}")
-    print(f"Initial MSE: {result.initial_mse:.6f}")
-    print(f"Best MSE: {result.best_mse:.6f}")
+    print(f"Initial weighted MSE: {result.initial_mse:.6f}")
+    print(f"Best weighted MSE: {result.best_mse:.6f}")
     print(f"Best PSNR: {result.best_psnr:.2f} dB")
     print(f"Improvement: {percentage:.2f}%")
     print(f"Stopped by: {result.stop_reason}")

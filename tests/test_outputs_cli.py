@@ -18,13 +18,13 @@ def _result(target_path: Path) -> TrainingResult:
     config = PPOConfig.quick()
     target = torch.zeros((1, 256, 256))
     target[:, 100:156, 100:156] = 1.0
-    phase = torch.linspace(0.0, 6.0, 64).reshape(8, 8)
+    phase = torch.linspace(0.0, 6.0, 4096).reshape(64, 64)
     camera = target * 0.9
     return TrainingResult(
         config=config,
         target_path=target_path,
         target=target,
-        initial_phase=torch.zeros((8, 8)),
+        initial_phase=torch.zeros((64, 64)),
         initial_camera=target * 0.5,
         initial_mse=0.05,
         best_phase=phase,
@@ -74,8 +74,8 @@ def test_save_training_result_writes_all_required_artifacts(tmp_path: Path) -> N
         "metrics.json",
     }
     assert {path.name for path in run_dir.iterdir()} == expected
-    assert np.load(run_dir / "best_phase.npy").shape == (8, 8)
-    assert Image.open(run_dir / "slm_8bit.png").size == (8, 8)
+    assert np.load(run_dir / "best_phase.npy").shape == (64, 64)
+    assert Image.open(run_dir / "slm_8bit.png").size == (64, 64)
     assert Image.open(run_dir / "simulated_camera.png").size == (256, 256)
     metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
     assert metrics["stop_reason"] == "total_steps"
@@ -84,8 +84,8 @@ def test_save_training_result_writes_all_required_artifacts(tmp_path: Path) -> N
     checkpoint = torch.load(
         run_dir / "checkpoint_best.pt", map_location="cpu", weights_only=False
     )
-    assert checkpoint["config"]["phase_size"] == 8
-    assert checkpoint["best_phase"].shape == (8, 8)
+    assert checkpoint["config"]["phase_size"] == 64
+    assert checkpoint["best_phase"].shape == (64, 64)
 
 
 def test_parser_and_quick_config_apply_overrides() -> None:
@@ -117,7 +117,7 @@ def test_quick_cli_runs_real_target_and_reports_output(
 
     captured = capsys.readouterr().out
     assert exit_code == 0
-    assert "Initial MSE:" in captured
-    assert "Best MSE:" in captured
+    assert "Initial weighted MSE:" in captured
+    assert "Best weighted MSE:" in captured
     assert "Output:" in captured
     assert (tmp_path / "cli-test" / "metrics.json").is_file()

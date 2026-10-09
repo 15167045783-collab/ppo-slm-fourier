@@ -117,7 +117,7 @@ class PPOAgent:
         with torch.no_grad():
             distribution, value = self.model.distribution_and_value(batch)
             action = distribution.mean if deterministic else distribution.sample()
-            log_probability = distribution.log_prob(action).sum(dim=-1)
+            log_probability = distribution.log_prob(action).mean(dim=-1)
         return PolicyStep(
             action=action[0].cpu(),
             log_prob=log_probability[0].cpu(),

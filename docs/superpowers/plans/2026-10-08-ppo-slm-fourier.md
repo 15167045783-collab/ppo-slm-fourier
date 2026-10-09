@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build an independent `PPO` project that trains PPO from a random `8×8` phase map to reproduce one selected `256×256` target through a simulated Fourier focal-plane optical path.
+**Goal:** Build an independent `PPO` project that trains PPO from a random `64×64` phase map to reproduce one selected `256×256` target through a simulated Fourier focal-plane optical path.
 
-**Architecture:** Keep image loading, differentiable-looking but detached optical simulation, RL environment, Actor-Critic/PPO, training orchestration, and artifact output in separate modules. The environment exposes a three-channel observation and 64-dimensional continuous phase increments; training tracks the best observed phase globally and stops on either the requested MSE or a finite step budget.
+**Architecture:** Keep image loading, detached optical simulation, RL environment, Actor-Critic/PPO, training orchestration, and artifact output in separate modules. The environment exposes a three-channel observation and 4096-dimensional continuous phase increments; training tracks the best observed phase globally and stops on either the requested foreground-weighted MSE or a finite step budget.
 
 **Tech Stack:** Python 3.10+, PyTorch, NumPy, Pillow, Matplotlib, pytest
 
@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Do not modify `moni` or any file under `PPO/data`.
-- The controlled phase is exactly `8×8`; optical propagation and observations are exactly `256×256`.
-- Phase interpolation is bilinear and phase values are wrapped into `[0, 2π)`.
+- The controlled phase is exactly `64×64`; optical propagation and observations are exactly `256×256`.
+- Phase expansion is nearest-neighbor and phase values are wrapped into `[0, 2π)`.
 - Each invocation trains against exactly one selected target image.
 - The default run and quick run both have finite step limits; reaching `target_mse` stops training early.
 - Optical captures and rewards are detached from autograd; PPO gradients update only the Actor-Critic.
@@ -44,7 +44,7 @@
 
 - [ ] **Step 1: Write failing configuration tests**
 
-Assert exact geometry (`phase_size=8`, `image_size=256`, `action_size=64`), positive/coherent PPO limits, quick-mode reductions, project-relative path resolution, repeatable random seeding, automatic device selection, and an error for explicit CUDA when unavailable.
+Assert exact geometry (`phase_size=64`, `image_size=256`, `action_size=4096`), positive/coherent PPO limits, quick-mode reductions, project-relative path resolution, repeatable random seeding, automatic device selection, and an error for explicit CUDA when unavailable.
 
 - [ ] **Step 2: Run the tests and verify RED**
 
@@ -54,7 +54,7 @@ Expected: FAIL because `ppo_slm.config` does not exist.
 
 - [ ] **Step 3: Implement the immutable configuration API**
 
-Use defaults: `action_scale=π/4`, `total_steps=20_000`, `rollout_steps=256`, `episode_length=256`, `target_mse=0.005`, `learning_rate=3e-4`, `gamma=0.99`, `gae_lambda=0.95`, `clip_ratio=0.2`, `update_epochs=10`, `minibatch_size=64`, `value_coefficient=0.5`, `entropy_coefficient=0.01`, `max_grad_norm=0.5`, `improvement_gain=100.0`, `mse_weight=1.0`, `action_penalty=0.001`, and `seed=7`. Quick mode uses 16 total steps, rollout/episode length 8, one update epoch, and minibatches of 4.
+Use defaults: `action_scale=π/16`, `foreground_weight=8.0`, `total_steps=20_000`, `rollout_steps=256`, `episode_length=256`, `target_mse=0.005`, `learning_rate=3e-4`, `gamma=0.99`, `gae_lambda=0.95`, `clip_ratio=0.2`, `update_epochs=10`, `minibatch_size=64`, `value_coefficient=0.5`, `entropy_coefficient=0.01`, `max_grad_norm=0.5`, `improvement_gain=100.0`, `mse_weight=1.0`, `action_penalty=0.001`, and `seed=7`. Quick mode uses 16 total steps, rollout/episode length 8, one update epoch, and minibatches of 4.
 
 - [ ] **Step 4: Run configuration tests and verify GREEN**
 
@@ -112,7 +112,7 @@ Commit message: `feat: load normalized target images`
 
 - [ ] **Step 1: Write failing optical behavior tests**
 
-Assert `8×8 → 256×256` bilinear interpolation, constant-phase preservation, FFT output `[1,256,256]`/finite/`[0,1]`/detached, and uint8 conversion shape and phase wrapping. Reject wrong dimensions, non-floating phase, NaN/Inf, nonpositive output sizes, and output sizes smaller than the phase map.
+Assert `64×64 → 256×256` nearest-neighbor expansion, macro-pixel preservation, FFT output `[1,256,256]`/finite/`[0,1]`/detached, and uint8 conversion shape and phase wrapping. Reject wrong dimensions, non-floating phase, NaN/Inf, nonpositive output sizes, and output sizes smaller than the phase map.
 
 - [ ] **Step 2: Run the tests and verify RED**
 
@@ -122,7 +122,7 @@ Expected: FAIL because the optical functions are missing.
 
 - [ ] **Step 3: Implement the optical functions**
 
-Use `torch.nn.functional.interpolate(..., mode="bilinear", align_corners=False)`, `torch.polar`, orthonormal `fft2`, `fftshift`, squared magnitude, and maximum normalization. Run propagation under `torch.no_grad()` and return a cloned detached tensor.
+Use `torch.nn.functional.interpolate(..., mode="nearest")`, `torch.polar`, orthonormal `fft2`, `fftshift`, squared magnitude, and maximum normalization. Run propagation under `torch.no_grad()` and return a cloned detached tensor.
 
 - [ ] **Step 4: Run optical tests and verify GREEN**
 
@@ -201,7 +201,7 @@ Commit message: `feat: add iterative SLM environment`
 
 - [ ] **Step 1: Write failing network and action tests**
 
-Assert batched network output shapes, finite learned log standard deviation, sampled/deterministic 64-value actions, scalar log probability/value, and rejection of malformed observations.
+Assert batched network output shapes, finite learned log standard deviation, sampled/deterministic 4096-value actions, scalar mean log probability/value, and rejection of malformed observations.
 
 - [ ] **Step 2: Run network tests and verify RED**
 
@@ -346,7 +346,7 @@ Commit message: `feat: save PPO results and add CLI`
 
 - [ ] **Step 1: Write the user documentation and dependency manifest**
 
-Document Windows/Linux environment setup, preserving an existing GPU PyTorch install, test command, quick run, full run, every CLI option, output interpretation, expected limitations of an `8×8` phase map, and copying the whole `PPO` directory to the server. Pin minimum compatible versions without forcing a CUDA-specific PyTorch wheel.
+Document Windows/Linux environment setup, preserving an existing GPU PyTorch install, test command, quick run, full run, every CLI option, output interpretation, expected limitations of a `64×64` phase map, and copying the whole `PPO` directory to the server. Pin minimum compatible versions without forcing a CUDA-specific PyTorch wheel.
 
 - [ ] **Step 2: Run the complete automated suite**
 
@@ -362,7 +362,7 @@ Expected: exit code 0, finite initial/best MSE, and all seven artifacts under a 
 
 - [ ] **Step 4: Inspect generated artifacts and source boundaries**
 
-Confirm the comparison/curve images are readable, `best_phase.npy` is `8×8`, `simulated_camera.png` is `256×256`, `metrics.json` reports a valid stop reason, and no tracked content outside `PPO` was modified by implementation.
+Confirm the comparison/curve images are readable, `best_phase.npy` is `64×64`, `simulated_camera.png` is `256×256`, `metrics.json` reports a valid stop reason, and no tracked content outside `PPO` was modified by implementation.
 
 - [ ] **Step 5: Compile all Python sources**
 

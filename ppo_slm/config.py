@@ -14,9 +14,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 @dataclass(frozen=True)
 class PPOConfig:
-    phase_size: int = 8
+    phase_size: int = 64
     image_size: int = 256
-    action_scale: float = math.pi / 4.0
+    action_scale: float = math.pi / 16.0
     total_steps: int = 20_000
     rollout_steps: int = 256
     episode_length: int = 256
@@ -33,6 +33,7 @@ class PPOConfig:
     improvement_gain: float = 100.0
     mse_weight: float = 1.0
     action_penalty: float = 0.001
+    foreground_weight: float = 8.0
     seed: int = 7
     device: str = "auto"
 
@@ -70,6 +71,7 @@ class PPOConfig:
             self.improvement_gain,
             self.mse_weight,
             self.action_penalty,
+            self.foreground_weight,
         )
         if not all(math.isfinite(value) for value in finite_values):
             raise ValueError("all floating-point configuration values must be finite")

@@ -38,9 +38,9 @@ def test_quick_training_tracks_histories_and_global_best(tmp_path: Path) -> None
     assert all(np.isfinite(result.mse_history))
     assert all(np.isfinite(result.reward_history))
     assert all(np.isfinite(result.psnr_history))
-    assert result.initial_phase.shape == (8, 8)
+    assert result.initial_phase.shape == (64, 64)
     assert result.initial_camera.shape == (1, 256, 256)
-    assert result.best_phase.shape == (8, 8)
+    assert result.best_phase.shape == (64, 64)
     assert result.best_camera.shape == (1, 256, 256)
     assert result.best_mse == pytest.approx(
         min([result.initial_mse, *result.mse_history])

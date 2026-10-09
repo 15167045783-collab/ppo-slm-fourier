@@ -59,6 +59,6 @@ class ActorCritic(nn.Module):
         self, observations: torch.Tensor, actions: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         distribution, values = self.distribution_and_value(observations)
-        log_probabilities = distribution.log_prob(actions).sum(dim=-1)
-        entropy = distribution.entropy().sum(dim=-1)
+        log_probabilities = distribution.log_prob(actions).mean(dim=-1)
+        entropy = distribution.entropy().mean(dim=-1)
         return log_probabilities, entropy, values

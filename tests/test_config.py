@@ -13,9 +13,10 @@ from ppo_slm.config import PPOConfig, project_path, seed_everything, select_devi
 def test_default_config_has_expected_geometry_and_valid_training_limits() -> None:
     config = PPOConfig()
 
-    assert config.phase_size == 8
+    assert config.phase_size == 64
     assert config.image_size == 256
-    assert config.action_size == 64
+    assert config.action_size == 4096
+    assert config.foreground_weight == pytest.approx(8.0)
     assert config.total_steps > 0
     assert 0 < config.rollout_steps <= config.total_steps
     assert 0 < config.minibatch_size <= config.rollout_steps
@@ -74,3 +75,5 @@ def test_config_rejects_negative_seed_and_zero_optimizer_scales() -> None:
         PPOConfig(action_scale=0.0)
     with pytest.raises(ValueError, match="max_grad_norm"):
         PPOConfig(max_grad_norm=0.0)
+    with pytest.raises(ValueError, match="weights and scales"):
+        PPOConfig(foreground_weight=-1.0)

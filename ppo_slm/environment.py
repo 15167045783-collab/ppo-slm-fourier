@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 
 import torch
-import torch.nn.functional as functional
 
 from .config import PPOConfig
 from .optics import fourier_intensity, upsample_phase
@@ -69,6 +68,12 @@ class SLMEnvironment:
             raise ValueError("camera frame values must be in [0, 1]")
         return frame
 
+    def _weighted_mse(self, frame: torch.Tensor) -> float:
+        weights = 1.0 + self.config.foreground_weight * self.target
+        squared_error = (frame - self.target).square()
+        weighted_error = (weights * squared_error).sum() / weights.sum()
+        return float(weighted_error.item())
+
     def _observation(self) -> torch.Tensor:
         phase_channel = upsample_phase(
             self._phase / (2 * math.pi), self.config.image_size
@@ -88,7 +93,7 @@ class SLMEnvironment:
         ) * (2 * math.pi)
         self._phase = phase.to(self.device)
         self._camera = self._capture()
-        self._mse = float(functional.mse_loss(self._camera, self.target).item())
+        self._mse = self._weighted_mse(self._camera)
         if not math.isfinite(self._mse):
             raise ValueError("initial MSE is not finite")
         self._steps = 0
@@ -111,7 +116,7 @@ class SLMEnvironment:
         )
         previous_mse = self._mse
         self._camera = self._capture()
-        current_mse = float(functional.mse_loss(self._camera, self.target).item())
+        current_mse = self._weighted_mse(self._camera)
         improvement = previous_mse - current_mse
         action_magnitude = float(bounded.square().mean().item())
         action_cost = self.config.action_penalty * action_magnitude
